@@ -59,4 +59,14 @@ public interface PlayTimeLimitConfig extends Config
 	{
 		return true;
 	}
+
+	@ConfigItem(
+		keyName = "showTodayTotalOnClock",
+		name = "Clock shows today's total",
+		description = "If enabled, the bottom clock shows your total playtime today; otherwise it shows time since login"
+	)
+	default boolean showTodayTotalOnClock()
+	{
+		return true;
+	}
 }

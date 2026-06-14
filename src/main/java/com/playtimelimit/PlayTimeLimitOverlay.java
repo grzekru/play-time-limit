@@ -5,9 +5,13 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -22,6 +26,9 @@ public class PlayTimeLimitOverlay extends Overlay
 	private static final Color SUB_TEXT_COLOR = new Color(255, 245, 245, 250);
 	private static final String WARNING_LINE_1 = "Take a break";
 	private static final String WARNING_LINE_2 = "You hit today's limit";
+	private static final Color BUTTON_TIMER_BG = new Color(80, 0, 0, 230);
+	private static final Color BUTTON_TIMER_TEXT = new Color(255, 220, 220, 255);
+	private static final int CLOCK_RIGHT_MARGIN = 2;
 
 	private final Client client;
 	private final PlayTimeLimitPlugin plugin;
@@ -39,6 +46,13 @@ public class PlayTimeLimitOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
+		if (!plugin.shouldRenderClock())
+		{
+			return null;
+		}
+
+		renderBottomClock(graphics);
+
 		if (!plugin.shouldFlashRed())
 		{
 			return null;
@@ -75,5 +89,52 @@ public class PlayTimeLimitOverlay extends Overlay
 		graphics.setColor(previous);
 		graphics.setFont(previousFont);
 		return null;
+	}
+
+	private void renderBottomClock(Graphics2D graphics)
+	{
+		Color previousColor = graphics.getColor();
+		Font previousFont = graphics.getFont();
+
+		String totalText = formatHms(plugin.getClockPlayedSeconds());
+
+		graphics.setFont(previousFont.deriveFont(Font.BOLD, 14f));
+		FontMetrics textMetrics = graphics.getFontMetrics();
+		int textWidth = textMetrics.stringWidth(totalText);
+
+		int panelWidth = textWidth + 20;
+		int panelHeight = 20;
+
+		Widget buttonsWidget = client.getWidget(WidgetInfo.CHATBOX_BUTTONS);
+		Widget tradeWidget = client.getWidget(WidgetInfo.CHATBOX_TAB_TRADE);
+		if (buttonsWidget == null || tradeWidget == null)
+		{
+			graphics.setColor(previousColor);
+			graphics.setFont(previousFont);
+			return;
+		}
+
+		Rectangle buttonRowBounds = buttonsWidget.getBounds();
+		Rectangle tradeBounds = tradeWidget.getBounds();
+		int x = buttonRowBounds.x + buttonRowBounds.width - panelWidth - CLOCK_RIGHT_MARGIN;
+		int y = tradeBounds.y + Math.max(0, (tradeBounds.height - panelHeight) / 2);
+
+		graphics.setColor(BUTTON_TIMER_BG);
+		graphics.fillRoundRect(x, y, panelWidth, panelHeight, 6, 6);
+
+		graphics.setColor(BUTTON_TIMER_TEXT);
+		graphics.drawString(totalText, x + (panelWidth - textWidth) / 2, y + 15);
+
+		graphics.setColor(previousColor);
+		graphics.setFont(previousFont);
+	}
+
+	private static String formatHms(long totalSeconds)
+	{
+		long safeSeconds = Math.max(0L, totalSeconds);
+		long hours = TimeUnit.SECONDS.toHours(safeSeconds);
+		long minutes = TimeUnit.SECONDS.toMinutes(safeSeconds) % 60;
+		long seconds = safeSeconds % 60;
+		return String.format("%02d:%02d:%02d", hours, minutes, seconds);
 	}
 }

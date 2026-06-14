@@ -29,9 +29,11 @@ import net.runelite.client.ui.overlay.OverlayManager;
 )
 public class PlayTimeLimitPlugin extends Plugin
 {
+	private static final String BUILD_MARKER = "PTL_LOCAL_TOTAL_1_1_2";
 	private static final String STATE_GROUP = "play-time-limit-state";
 	private static final String STATE_DAY_KEY = "trackedDay";
 	private static final String STATE_SECONDS_KEY = "dailyPlayedSeconds";
+	private static final String STATE_TOTAL_SECONDS_KEY = "totalPlayedSeconds";
 	private static final int MIN_PERSIST_INTERVAL_SECONDS = 10;
 	private static final String FIRST_WARNING_PREFIX = "Limit reached";
 	private static final String REMINDER_WARNING_PREFIX = "Still over limit";
@@ -56,6 +58,8 @@ public class PlayTimeLimitPlugin extends Plugin
 
 	private LocalDate trackedDay;
 	private long dailyPlayedSeconds;
+	private long totalPlayedSeconds;
+	private long sessionPlayedSeconds;
 	private long unsavedSeconds;
 	private Instant lastAccrualTick;
 	private Instant lastWarning;
@@ -66,6 +70,8 @@ public class PlayTimeLimitPlugin extends Plugin
 	protected void startUp()
 	{
 		log.debug("Play Time Limit started");
+		log.info("Play Time Limit build marker: {}", BUILD_MARKER);
+		configManager.setConfiguration(STATE_GROUP, "buildMarker", BUILD_MARKER);
 		overlayManager.add(overlay);
 		loadState();
 		ensureToday();
@@ -86,6 +92,10 @@ public class PlayTimeLimitPlugin extends Plugin
 		GameState gameState = event.getGameState();
 		if (gameState == GameState.LOGGED_IN)
 		{
+			if (lastAccrualTick == null)
+			{
+				sessionPlayedSeconds = 0;
+			}
 			lastAccrualTick = Instant.now();
 			ensureToday();
 		}
@@ -94,6 +104,7 @@ public class PlayTimeLimitPlugin extends Plugin
 		{
 			lastAccrualTick = null;
 			flashOn = false;
+			limitExceeded = false;
 			persistState(true);
 		}
 	}
@@ -119,6 +130,8 @@ public class PlayTimeLimitPlugin extends Plugin
 		if (elapsedSeconds > 0)
 		{
 			dailyPlayedSeconds += elapsedSeconds;
+			totalPlayedSeconds += elapsedSeconds;
+			sessionPlayedSeconds += elapsedSeconds;
 			unsavedSeconds += elapsedSeconds;
 			lastAccrualTick = now;
 			persistState(false);
@@ -199,6 +212,8 @@ public class PlayTimeLimitPlugin extends Plugin
 	{
 		lastAccrualTick = null;
 		lastWarning = null;
+		limitExceeded = false;
+		sessionPlayedSeconds = 0;
 		flashOn = false;
 	}
 
@@ -253,6 +268,20 @@ public class PlayTimeLimitPlugin extends Plugin
 			}
 		}
 
+		String totalSecondsValue = configManager.getConfiguration(STATE_GROUP, STATE_TOTAL_SECONDS_KEY);
+		if (totalSecondsValue != null && !totalSecondsValue.isEmpty())
+		{
+			try
+			{
+				totalPlayedSeconds = Math.max(0L, Long.parseLong(totalSecondsValue));
+			}
+			catch (NumberFormatException ex)
+			{
+				log.debug("Invalid stored total seconds '{}', resetting to 0", totalSecondsValue, ex);
+				totalPlayedSeconds = 0L;
+			}
+		}
+
 		long limitSeconds = Math.max(1, config.limitMinutes()) * 60L;
 		limitExceeded = dailyPlayedSeconds >= limitSeconds;
 	}
@@ -269,7 +298,38 @@ public class PlayTimeLimitPlugin extends Plugin
 			configManager.setConfiguration(STATE_GROUP, STATE_DAY_KEY, trackedDay.toString());
 		}
 		configManager.setConfiguration(STATE_GROUP, STATE_SECONDS_KEY, Long.toString(dailyPlayedSeconds));
+		configManager.setConfiguration(STATE_GROUP, STATE_TOTAL_SECONDS_KEY, Long.toString(totalPlayedSeconds));
 		unsavedSeconds = 0;
+	}
+
+	long getTotalPlayedSeconds()
+	{
+		return totalPlayedSeconds;
+	}
+
+	long getDailyPlayedSeconds()
+	{
+		return dailyPlayedSeconds;
+	}
+
+	long getSessionPlayedSeconds()
+	{
+		return sessionPlayedSeconds;
+	}
+
+	long getClockPlayedSeconds()
+	{
+		return config.showTodayTotalOnClock() ? dailyPlayedSeconds : sessionPlayedSeconds;
+	}
+
+	int getDailyLimitMinutes()
+	{
+		return config.limitMinutes();
+	}
+
+	boolean shouldRenderClock()
+	{
+		return isLoggedIn();
 	}
 
 	private LocalDate currentDay()
