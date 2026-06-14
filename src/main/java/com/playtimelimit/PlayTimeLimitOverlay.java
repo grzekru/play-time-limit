@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -105,8 +105,8 @@ public class PlayTimeLimitOverlay extends Overlay
 		int panelWidth = textWidth + 20;
 		int panelHeight = 20;
 
-		Widget buttonsWidget = client.getWidget(WidgetInfo.CHATBOX_BUTTONS);
-		Widget tradeWidget = client.getWidget(WidgetInfo.CHATBOX_TAB_TRADE);
+		Widget buttonsWidget = client.getWidget(ComponentID.CHATBOX_BUTTONS);
+		Widget tradeWidget = client.getWidget(ComponentID.CHATBOX_TAB_TRADE);
 		if (buttonsWidget == null || tradeWidget == null)
 		{
 			graphics.setColor(previousColor);

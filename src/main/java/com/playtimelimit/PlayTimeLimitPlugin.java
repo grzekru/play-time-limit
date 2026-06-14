@@ -29,7 +29,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 )
 public class PlayTimeLimitPlugin extends Plugin
 {
-	private static final String BUILD_MARKER = "PTL_LOCAL_TOTAL_1_1_3";
+	private static final String BUILD_MARKER = "PTL_LOCAL_TOTAL_1_1_4";
 	private static final String STATE_GROUP = "play-time-limit-state";
 	private static final String STATE_DAY_KEY = "trackedDay";
 	private static final String STATE_SECONDS_KEY = "dailyPlayedSeconds";
