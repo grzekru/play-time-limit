@@ -20,8 +20,8 @@ public class PlayTimeLimitOverlay extends Overlay
 	private static final Color PANEL_COLOR = new Color(0, 0, 0, 215);
 	private static final Color MAIN_TEXT_COLOR = new Color(255, 255, 255, 250);
 	private static final Color SUB_TEXT_COLOR = new Color(255, 245, 245, 250);
-	private static final String WARNING_LINE_1 = "Break time";
-	private static final String WARNING_LINE_2 = "Daily limit reached";
+	private static final String WARNING_LINE_1 = "Take a break";
+	private static final String WARNING_LINE_2 = "You hit today's limit";
 
 	private final Client client;
 	private final PlayTimeLimitPlugin plugin;

@@ -24,7 +24,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 @Slf4j
 @PluginDescriptor(
 	name = "Play Time Limit",
-	description = "Strong alerts when your configured play session limit is exceeded",
+	description = "Tracks daily playtime and reminds you to take a break after you hit your limit",
 	tags = {"time", "limit", "break", "session"}
 )
 public class PlayTimeLimitPlugin extends Plugin
@@ -33,8 +33,8 @@ public class PlayTimeLimitPlugin extends Plugin
 	private static final String STATE_DAY_KEY = "trackedDay";
 	private static final String STATE_SECONDS_KEY = "dailyPlayedSeconds";
 	private static final int MIN_PERSIST_INTERVAL_SECONDS = 10;
-	private static final String FIRST_WARNING_PREFIX = "DAILY LIMIT EXCEEDED";
-	private static final String REMINDER_WARNING_PREFIX = "STILL OVER DAILY LIMIT";
+	private static final String FIRST_WARNING_PREFIX = "Limit reached";
+	private static final String REMINDER_WARNING_PREFIX = "Still over limit";
 
 	@Inject
 	private Client client;
@@ -164,7 +164,7 @@ public class PlayTimeLimitPlugin extends Plugin
 	private void sendWarning(long playedMinutes, int limitMinutes, boolean firstWarning)
 	{
 		String prefix = firstWarning ? FIRST_WARNING_PREFIX : REMINDER_WARNING_PREFIX;
-		String message = String.format("%s: you have played %d minutes today (limit %d minutes). Take a break.", prefix, playedMinutes, limitMinutes);
+		String message = String.format("%s: played %d min today (limit %d min). Time for a break.", prefix, playedMinutes, limitMinutes);
 
 		if (config.chatWarning())
 		{
