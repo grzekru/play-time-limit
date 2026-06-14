@@ -63,7 +63,7 @@ git commit -m "add ${PLUGIN_SLUG}"
 # Push to user's fork via GitHub CLI; creates fork if needed.
 if ! gh repo view "$OWNER/plugin-hub" >/dev/null 2>&1; then
   echo "Forking runelite/plugin-hub into ${OWNER}/plugin-hub"
-  gh repo fork runelite/plugin-hub --clone=false --remote=false
+  gh repo fork runelite/plugin-hub --clone=false
 fi
 
 git remote add fork "https://github.com/${OWNER}/plugin-hub.git"
