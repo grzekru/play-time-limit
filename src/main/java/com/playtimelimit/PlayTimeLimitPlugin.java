@@ -61,6 +61,7 @@ public class PlayTimeLimitPlugin extends Plugin
 	private long totalPlayedSeconds;
 	private long sessionPlayedSeconds;
 	private long unsavedSeconds;
+	private long pendingAccrualMillis;
 	private Instant lastAccrualTick;
 	private Instant lastWarning;
 	private boolean limitExceeded;
@@ -103,6 +104,7 @@ public class PlayTimeLimitPlugin extends Plugin
 		if (gameState == GameState.LOGIN_SCREEN)
 		{
 			lastAccrualTick = null;
+			pendingAccrualMillis = 0;
 			flashOn = false;
 			limitExceeded = false;
 			persistState(true);
@@ -126,14 +128,17 @@ public class PlayTimeLimitPlugin extends Plugin
 			return;
 		}
 
-		long elapsedSeconds = Duration.between(lastAccrualTick, now).getSeconds();
+		long elapsedMillis = Math.max(0L, Duration.between(lastAccrualTick, now).toMillis());
+		pendingAccrualMillis += elapsedMillis;
+		lastAccrualTick = now;
+		long elapsedSeconds = pendingAccrualMillis / 1000L;
 		if (elapsedSeconds > 0)
 		{
+			pendingAccrualMillis %= 1000L;
 			dailyPlayedSeconds += elapsedSeconds;
 			totalPlayedSeconds += elapsedSeconds;
 			sessionPlayedSeconds += elapsedSeconds;
 			unsavedSeconds += elapsedSeconds;
-			lastAccrualTick = now;
 			persistState(false);
 		}
 
@@ -214,6 +219,7 @@ public class PlayTimeLimitPlugin extends Plugin
 		lastWarning = null;
 		limitExceeded = false;
 		sessionPlayedSeconds = 0;
+		pendingAccrualMillis = 0;
 		flashOn = false;
 	}
 
@@ -232,6 +238,7 @@ public class PlayTimeLimitPlugin extends Plugin
 			trackedDay = today;
 			dailyPlayedSeconds = 0;
 			unsavedSeconds = 0;
+			pendingAccrualMillis = 0;
 			lastWarning = null;
 			limitExceeded = false;
 			flashOn = false;
