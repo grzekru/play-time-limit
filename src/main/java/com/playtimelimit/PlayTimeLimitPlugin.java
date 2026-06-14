@@ -32,6 +32,9 @@ public class PlayTimeLimitPlugin extends Plugin
 	private static final String STATE_GROUP = "play-time-limit-state";
 	private static final String STATE_DAY_KEY = "trackedDay";
 	private static final String STATE_SECONDS_KEY = "dailyPlayedSeconds";
+	private static final int MIN_PERSIST_INTERVAL_SECONDS = 10;
+	private static final String FIRST_WARNING_PREFIX = "DAILY LIMIT EXCEEDED";
+	private static final String REMINDER_WARNING_PREFIX = "STILL OVER DAILY LIMIT";
 
 	@Inject
 	private Client client;
@@ -80,13 +83,14 @@ public class PlayTimeLimitPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
-		if (event.getGameState() == GameState.LOGGED_IN)
+		GameState gameState = event.getGameState();
+		if (gameState == GameState.LOGGED_IN)
 		{
 			lastAccrualTick = Instant.now();
 			ensureToday();
 		}
 
-		if (event.getGameState() == GameState.LOGIN_SCREEN)
+		if (gameState == GameState.LOGIN_SCREEN)
 		{
 			lastAccrualTick = null;
 			flashOn = false;
@@ -99,7 +103,7 @@ public class PlayTimeLimitPlugin extends Plugin
 	{
 		ensureToday();
 
-		if (client.getGameState() != GameState.LOGGED_IN)
+		if (!isLoggedIn())
 		{
 			return;
 		}
@@ -136,9 +140,7 @@ public class PlayTimeLimitPlugin extends Plugin
 			return;
 		}
 
-		long secondsFromLastWarning = lastWarning == null
-			? Long.MAX_VALUE
-			: Duration.between(lastWarning, now).getSeconds();
+		long secondsFromLastWarning = Duration.between(lastWarning, now).getSeconds();
 		long reminderIntervalSeconds = Math.max(1, config.reminderIntervalMinutes()) * 60L;
 
 		if (secondsFromLastWarning >= reminderIntervalSeconds)
@@ -150,7 +152,7 @@ public class PlayTimeLimitPlugin extends Plugin
 	@Schedule(period = 500, unit = ChronoUnit.MILLIS)
 	public void updateFlash()
 	{
-		if (client.getGameState() != GameState.LOGGED_IN || !limitExceeded)
+		if (!isLoggedIn() || !limitExceeded)
 		{
 			flashOn = false;
 			return;
@@ -161,7 +163,7 @@ public class PlayTimeLimitPlugin extends Plugin
 
 	private void sendWarning(long playedMinutes, int limitMinutes, boolean firstWarning)
 	{
-		String prefix = firstWarning ? "DAILY LIMIT EXCEEDED" : "STILL OVER DAILY LIMIT";
+		String prefix = firstWarning ? FIRST_WARNING_PREFIX : REMINDER_WARNING_PREFIX;
 		String message = String.format("%s: you have played %d minutes today (limit %d minutes). Take a break.", prefix, playedMinutes, limitMinutes);
 
 		if (config.chatWarning())
@@ -183,9 +185,14 @@ public class PlayTimeLimitPlugin extends Plugin
 		log.debug("Play limit warning sent: {}", message);
 	}
 
+	private boolean isLoggedIn()
+	{
+		return client.getGameState() == GameState.LOGGED_IN;
+	}
+
 	boolean shouldFlashRed()
 	{
-		return flashOn && limitExceeded && client.getGameState() == GameState.LOGGED_IN;
+		return flashOn && limitExceeded && isLoggedIn();
 	}
 
 	private void resetRuntimeState()
@@ -197,7 +204,7 @@ public class PlayTimeLimitPlugin extends Plugin
 
 	private void ensureToday()
 	{
-		LocalDate today = LocalDate.now(ZoneId.systemDefault());
+		LocalDate today = currentDay();
 		if (trackedDay == null)
 		{
 			trackedDay = today;
@@ -222,13 +229,28 @@ public class PlayTimeLimitPlugin extends Plugin
 		String dayValue = configManager.getConfiguration(STATE_GROUP, STATE_DAY_KEY);
 		if (dayValue != null && !dayValue.isEmpty())
 		{
-			trackedDay = LocalDate.parse(dayValue);
+			try
+			{
+				trackedDay = LocalDate.parse(dayValue);
+			}
+			catch (RuntimeException ex)
+			{
+				log.debug("Invalid stored day '{}', resetting state", dayValue, ex);
+			}
 		}
 
 		String secondsValue = configManager.getConfiguration(STATE_GROUP, STATE_SECONDS_KEY);
 		if (secondsValue != null && !secondsValue.isEmpty())
 		{
-			dailyPlayedSeconds = Long.parseLong(secondsValue);
+			try
+			{
+				dailyPlayedSeconds = Math.max(0L, Long.parseLong(secondsValue));
+			}
+			catch (NumberFormatException ex)
+			{
+				log.debug("Invalid stored seconds '{}', resetting to 0", secondsValue, ex);
+				dailyPlayedSeconds = 0L;
+			}
 		}
 
 		long limitSeconds = Math.max(1, config.limitMinutes()) * 60L;
@@ -237,7 +259,7 @@ public class PlayTimeLimitPlugin extends Plugin
 
 	private void persistState(boolean force)
 	{
-		if (!force && unsavedSeconds < 10)
+		if (!force && unsavedSeconds < MIN_PERSIST_INTERVAL_SECONDS)
 		{
 			return;
 		}
@@ -248,6 +270,11 @@ public class PlayTimeLimitPlugin extends Plugin
 		}
 		configManager.setConfiguration(STATE_GROUP, STATE_SECONDS_KEY, Long.toString(dailyPlayedSeconds));
 		unsavedSeconds = 0;
+	}
+
+	private LocalDate currentDay()
+	{
+		return LocalDate.now(ZoneId.systemDefault());
 	}
 
 	@Provides

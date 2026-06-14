@@ -11,8 +11,8 @@ public interface PlayTimeLimitConfig extends Config
 	@Range(min = 1, max = 1440)
 	@ConfigItem(
 		keyName = "limitMinutes",
-		name = "Daily total limit (minutes)",
-		description = "Total time played today before alerts and red flashing start"
+		name = "Daily limit (minutes)",
+		description = "Total play time allowed today before alerts start"
 	)
 	default int limitMinutes()
 	{
@@ -22,8 +22,8 @@ public interface PlayTimeLimitConfig extends Config
 	@Range(min = 1, max = 60)
 	@ConfigItem(
 		keyName = "reminderIntervalMinutes",
-		name = "Reminder interval (minutes)",
-		description = "How often to repeat alerts after crossing the limit"
+		name = "Reminder every (minutes)",
+		description = "How often to repeat alerts after you go over the limit"
 	)
 	default int reminderIntervalMinutes()
 	{
@@ -32,8 +32,8 @@ public interface PlayTimeLimitConfig extends Config
 
 	@ConfigItem(
 		keyName = "chatWarning",
-		name = "Show chat warning",
-		description = "Show warning message in chat after crossing the limit"
+		name = "Chat warning",
+		description = "Send warning messages to the game chat"
 	)
 	default boolean chatWarning()
 	{
@@ -43,7 +43,7 @@ public interface PlayTimeLimitConfig extends Config
 	@ConfigItem(
 		keyName = "desktopNotification",
 		name = "Desktop notification",
-		description = "Show desktop notification after crossing the limit"
+		description = "Show a desktop notification when over the limit"
 	)
 	default boolean desktopNotification()
 	{
@@ -52,8 +52,8 @@ public interface PlayTimeLimitConfig extends Config
 
 	@ConfigItem(
 		keyName = "beep",
-		name = "Play beep",
-		description = "Play a system beep for stronger alerting"
+		name = "Sound alert",
+		description = "Play a short system beep with each warning"
 	)
 	default boolean beep()
 	{
